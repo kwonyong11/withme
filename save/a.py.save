@@ -1,0 +1,144 @@
+from flask import Flask, render_template, request, redirect, url_for, session, escape, flash
+from datetime import datetime
+import pymysql
+import ssl
+import os
+import re
+
+from config import BaseConfig
+from utils import *
+
+app = Flask(__name__)
+app.secret_key = os.urandom(24)
+
+conn = pymysql.connect(host='localhost', user='root', password='withmeproject', database='my_test')
+
+@app.route('/')
+def home():
+	if 'username' in session:
+		return "{0}</br><a href='/logout'>Logout</a>".format(escape(session['username']))
+	else:
+		return render_template('signin.html')
+
+@app.route('/signin',methods = ['POST', 'GET'])
+def signin():
+	if request.method == 'POST':
+		id = request.form['userID']
+		pwd = request.form['userPWD']
+
+		sql = "select id from user where id = %s and pwd = %s"
+		curs = conn.cursor()
+		curs.execute(sql, (id, pwd))
+		account = curs.fetchone()
+		conn.commit()
+		if account:
+			sql = "select id from user where id=%s and active=0;"
+			curs = conn.cursor()
+			curs.execute(sql, (id))
+			auth_account = curs.fetchone()
+			if auth_account: # 이메일 인증 X
+				flash('이메일 인증을 해주세요!', 'warning')
+				return redirect(url_for('home'))
+			else: # 인증 완료
+				session['username'] = id
+				return redirect(url_for('home'))
+		else:
+			flash('아이디 또는 비밀번호가 틀렸습니다!', 'danger')
+			return redirect(url_for('home'))
+	else:
+		return render_template('signin.html')
+
+@app.route('/signup',methods = ['POST', 'GET'])
+def signup():
+	if request.method == 'POST' and 'userID' in request.form and 'userPWD' in request.form:
+		if request.form['userPWD'] == request.form['userRePWD']:
+			id     = request.form['userID']
+			pwd    = request.form['userPWD']
+			email  = request.form['email']
+			time   = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+
+			sql = "select * from user where id = %s"
+			curs = conn.cursor()
+			curs.execute(sql, (id))
+			account = curs.fetchone()
+			conn.commit()
+
+			sql = "select * from user where email = %s"
+			curs = conn.cursor()
+			curs.execute(sql, (email))
+			email_exist = curs.fetchone()
+			conn.commit()
+			if account:
+				# Account already exists!
+				flash('아이디가 이미 존재합니다!')
+				return redirect(url_for('signup'))
+			elif email_exist:
+				flash('이미 존재하는 이메일입니다!')
+				return redirect(url_for('signup'))
+			elif not re.match(r'[^@]+@[^@]+\.[^@]+', email):
+				# Invalid email address!
+				flash('이메일을 다시 확인해주세요!')
+				return redirect(url_for('signup'))
+			elif not re.match(r'[A-Za-z0-9]+', id):
+				# Username must contain only characters and numbers!
+				flash('영어 또는 숫자로 입력해주세요!')
+				return redirect(url_for('signup'))
+			elif not id or not pwd or not email:
+				# Please fill out the form!
+				flash('양식을 다시 확인해주세!')
+				return redirect(url_for('signup'))
+			else:
+				# success
+				if not check_email_validation(email):
+					flash('이메일이 유효하지 않습니다!')
+					return redirect(url_for('signup'))
+				else:
+					session['email'] = email
+					send_confirmation_mail(email, id)
+
+					sql = "insert into user(id, pwd, email, signup) values(%s, %s, %s, %s)"
+					curs = conn.cursor()
+					curs.execute(sql, (id, pwd, email, time))
+					conn.commit()
+					flash('회원가입에 성공했습니다!', 'success')
+					return render_template('signin.html')
+		else:
+			flash('다시 입력해주세요!')
+			return redirect(url_for('signup'))
+	else:
+		return render_template('signup.html')
+
+@app.route('/confirm/<token>')
+def confirm_email(token):
+	try:
+		data = confirm_token(token)
+	except:
+		flash('이메일 인증 토큰이 만료되었습니다!', 'danger')
+		return redirect(url_for('signin'))
+
+	# DB user.activate = True
+	sql = "update user set active=%s where email=%s"
+	curs = conn.cursor()
+	curs.execute(sql, (1,session.get('email')))
+	conn.commit()
+	flash('이메일 인증에 성공했습니다!!', 'primary')
+	#
+	session.pop('email', None)
+	#
+	return redirect(url_for('signin'))
+
+@app.route('/resend')
+def resend_confirmation():
+	send_confirmation_mail(session['email'], session['username'])
+
+@app.route("/logout")
+def logout():
+	session.pop('username', None)
+	session.pop('email', None)
+	return redirect(url_for('home'))
+
+if __name__ == "__main__":
+	#context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+	#context.load_cert_chain('ssl/cert.pem', 'ssl/key.pem')
+	app.run(host='202.182.127.157', port=80) #ssl_context=context
+

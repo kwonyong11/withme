@@ -1,0 +1,185 @@
+from flask import Flask, render_template, request, redirect, url_for, session, escape, flash, jsonify
+from datetime import datetime
+import pymysql
+import random
+import time
+import ssl
+import os
+import re
+
+from config import BaseConfig
+from utils import *
+
+app = Flask(__name__)
+app.secret_key = os.urandom(24)
+
+conn = pymysql.connect(host='localhost', user='root', password='withmeproject', database='my_test')
+
+@app.route('/')
+def home():
+	if 'username' in session:
+		return render_template('index.html')
+	else:
+		return render_template('signin.html')
+
+@app.route('/user', methods = ['GET'])
+def user():
+	if 'username' in session:
+		sql = "select id,email,sex,signup from user where id = %s"
+		curs = conn.cursor()
+		curs.execute(sql, session.get('username'))
+		userdata = curs.fetchone()
+		conn.commit()
+		if userdata[2] == 1: sex = '남자'
+		else: sex = '여자'
+		signup_data = userdata[3].strftime('%Y-%m-%d')
+		items = {'아이디':userdata[0], '이메일':userdata[1], '성별':sex, '생일':signup_data}
+		return render_template('user.html', items=items)
+	else:
+		return redirect(url_for('home'))
+
+@app.route('/write', methods = ['POST', 'GET'])
+def write():
+	if request.method == 'POST' and 'username' in session:
+		writer 	   = session.get('username')
+		title 	   = request.form['title']
+		content    = request.form['content']
+		max_count  = request.form['max_count']
+		start_time = datetime.strptime(request.form['start_time'], "%H:%M")
+		end_time   = datetime.strptime(request.form['end_time'], "%H:%M")
+		date 	   = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+
+		sql = "insert into board(writer, title, content, start_time, end_time, max_count, date) values(%s, %s, %s, %s, %s, %s, %s);"
+		curs = conn.cursor()
+		curs.execute(sql, (writer, title, content, start_time, end_time, max_count, date))
+		conn.commit()
+
+		return redirect(url_for('home'))
+	else:
+		return render_template('signin.html')
+
+@app.route('/signin',methods = ['POST', 'GET'])
+def signin():
+	if request.method == 'POST':
+		id = request.form['userID']
+		pwd = request.form['userPWD']
+
+		sql = "select id from user where id = %s and pwd = %s"
+		curs = conn.cursor()
+		curs.execute(sql, (id, pwd))
+		account = curs.fetchone()
+		conn.commit()
+		if account:
+			sql = "select id from user where id=%s and active=0;"
+			curs = conn.cursor()
+			curs.execute(sql, (id))
+			auth_account = curs.fetchone()
+			conn.commit()
+			if auth_account: # 이메일 인증 X
+				flash('이메일 인증을 해주세요!', 'warning')
+				return redirect(url_for('home'))
+			else: # 인증 완료
+				session['username'] = id
+				return redirect(url_for('home'))
+		else:
+			flash('아이디 또는 비밀번호가 틀렸습니다!', 'danger')
+			return redirect(url_for('home'))
+	else:
+		return render_template('signin.html')
+
+@app.route('/signup',methods = ['POST', 'GET'])
+def signup():
+	if request.method == 'POST' and 'userID' in request.form and 'userPWD' in request.form:
+		if request.form['userPWD'] == request.form['userRePWD']:
+			id     = request.form['userID']
+			pwd    = request.form['userPWD']
+			email  = request.form['email']
+			sex    = request.form['sex']
+			birth  = request.form['birth']
+			time   = datetime.today().strftime("%Y-%m-%d %H:%M:%S")
+
+			sql = "select * from user where id = %s"
+			curs = conn.cursor()
+			curs.execute(sql, (id))
+			account = curs.fetchone()
+			conn.commit()
+
+			sql = "select * from user where email = %s"
+			curs = conn.cursor()
+			curs.execute(sql, (email))
+			email_exist = curs.fetchone()
+			conn.commit()
+			if account:
+				# Account already exists!
+				flash('아이디가 이미 존재합니다!')
+				return redirect(url_for('signup'))
+			elif email_exist:
+				flash('이미 존재하는 이메일입니다!')
+				return redirect(url_for('signup'))
+			elif not re.match(r'[^@]+@[^@]+\.[^@]+', email):
+				# Invalid email address!
+				flash('이메일을 다시 확인해주세요!')
+				return redirect(url_for('signup'))
+			elif not re.match(r'[A-Za-z0-9]+', id):
+				# Username must contain only characters and numbers!
+				flash('영어 또는 숫자로 입력해주세요!')
+				return redirect(url_for('signup'))
+			elif not id or not pwd or not email:
+				# Please fill out the form!
+				flash('양식을 다시 확인해주세요!')
+				return redirect(url_for('signup'))
+			else:
+				# success
+				if not check_email_validation(email):
+					flash('이메일이 유효하지 않습니다!')
+					return redirect(url_for('signup'))
+				else:
+					session['email'] = email
+					send_confirmation_mail(email, id)
+
+					sql = "insert into user(id, pwd, email, signup, sex, birth) values(%s, %s, %s, %s, %s, %s)"
+					curs = conn.cursor()
+					curs.execute(sql, (id, pwd, email, time, sex, birth))
+					conn.commit()
+					flash('회원가입에 성공했습니다!', 'success')
+					return redirect(url_for('home'))
+		else:
+			flash('다시 입력해주세요!')
+			return redirect(url_for('home'))
+	else:
+		return render_template('signup.html')
+
+@app.route('/confirm/<token>')
+def confirm_email(token):
+	try:
+		data = confirm_token(token)
+	except:
+		flash('이메일 인증 토큰이 만료되었습니다!', 'danger')
+		return redirect(url_for('home'))
+
+	# DB user.activate = True
+	sql = "update user set active=%s where email=%s"
+	curs = conn.cursor()
+	curs.execute(sql, (1, session.get('email')))
+	conn.commit()
+	flash('이메일 인증에 성공했습니다!!', 'primary')
+
+	return redirect(url_for('signin'))
+
+@app.route('/resend')
+def resend_confirmation():
+	send_confirmation_mail(session['email'], session['username'])
+
+@app.route("/logout", methods=['POST'])
+def logout():
+	if request.method == 'POST':
+		session.pop('username', None)
+		session.pop('email', None)
+		flash('로그아웃 처리 성공!', 'info')
+		return redirect(url_for('home'))
+
+if __name__ == "__main__":
+	#context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
+	#context.load_cert_chain('ssl/cert.pem', 'ssl/key.pem')
+	app.run(host='202.182.127.157', port=80) #ssl_context=context
+

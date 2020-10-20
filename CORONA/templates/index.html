@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-158084303-1"></script>
+    <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'UA-158084303-1');
+    </script>
+
+    <!-- feathericons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+	  <!-- Favicons -->
+    <link rel="shortcut icon" href="./static/favicon.ico">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/3.7.2/animate.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.8.2/css/all.min.css" />
+    <link href="https://fonts.googleapis.com/css?family=Fjalla+One&display=swap" rel="stylesheet">
+    <script src="//developers.kakao.com/sdk/js/kakao.min.js"></script>
+
+    <title>Coro.na</title>
+
+    <style>
+        html, body{
+            overflow: hidden;
+            background-color: #15B7B9;
+        }
+        .upText {
+            border-color: #15B7B9;
+            background-color: #15B7B9;
+            color:white;
+        }
+        .upText:hover{
+            color:white;
+            background-color: #15B7B9;
+            border-color: #15B7B9;
+        }
+        .upText:active{
+            background-color: #15B7B9!important;
+            border-color: #15B7B9!important;
+        }
+        .no-padding {
+            padding: 0 !important;
+        }
+        .main {
+            overflow-x: hidden;
+            overflow-y: hidden;
+            max-height: 100vh;
+            display: block;
+        }
+        .navbar-brand{
+            font-family: 'Fjalla One';
+        }
+        .badge{
+            font-size: 12px;
+        }
+        .fas{
+            color:white;
+            font-size: 20px;
+        }
+    </style>
+  </head>
+  <body>
+    <div class="modal fade" id="infoModal" tabindex="-1" role="dialog" aria-labelledby="infoModaltitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content text-center">
+            <div class="modal-header" style="margin: 0 auto; border-bottom: 0 none;">
+              <h5 class="modal-title" id="infoModaltitle" style="color:#15B7B9">CORO.NA</h5>
+            </div>
+            <div class="modal-body">
+                <div style="font-size: 12px">
+                    <strong>주요증상</strong><br>
+                    발열 또는 호흡기 증상(기침, 인후통)<br><br>
+                    <strong>관련정보</strong><br>
+                    <a href="http://www.mohw.go.kr/react/popup_200128_2.html">검체채취 가능 진료소</a><br>
+                    <a href="https://news.naver.com/main/factcheck/main.nhn?section=%C4%DA%B7%CE%B3%AA+%B9%D9%C0%CC%B7%AF%BD%BA">SNU 팩트체크</a><br>
+                    <a href="http://ncov.mohw.go.kr/tcmBoardList.do">보도자료</a>
+                    <br><br>
+                    <a id="kakao-link-btn" href="javascript:sendLink()">
+                        <img style="width: 35px;" src="//developers.kakao.com/assets/img/about/logos/kakaolink/kakaolink_btn_medium.png"/>
+                    </a>
+                </div><br>
+
+                <div>
+                    <small>
+                        <strong>출처</strong>&nbsp;&nbsp;&nbsp;&nbsp; 질병관리본부<br>
+                        <strong>지도</strong>&nbsp; Kakao Map API<br>
+                        <span style="color:#15B7B9">Developed by <strong>XENIA</strong></span>
+                    </small><br>
+                </div>
+            </div>
+            <div class="modal-footer text-center" style="margin: 0 auto; border-top: 0 none;">
+                <button type="button" class="btn btn-sm btn-outline-dark" data-dismiss="modal">닫기</button>
+            </div>
+          </div>
+        </div>
+    </div>
+
+    <nav class="navbar navbar-expand-md navbar-light bg-light" style="background-color: #15B7B9!important; margin-bottom: 1px;">
+      <a class="navbar-brand pt-1" style="color:white; font-size:1.5rem">CORO.NA</a>
+      <div class="form-inline">
+        <i class="fas fa-feather-alt pr-2" data-toggle="modal" data-target="#Modal"></i>
+        <a class="form-inline" href="http://www.withme.xyz" style="color:white; cursor:pointer;"><i class="mr-sm-2" data-feather="arrow-left"></i></a>
+      </div>
+   </nav>
+
+    <!-- Modal -->
+    <div class="modal fade" id="Modal" tabindex="-1" role="dialog" aria-labelledby="ModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">실시간 소식</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <a class="twitter-timeline" data-height="500" data-lang="ko" data-theme="light" href="https://twitter.com/KoreaCDC?ref_src=twsrc%5Etfw">Tweets by KoreaCDC</a> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+            </div>
+        </div>
+        </div>
+    </div>
+
+    <div class="container no-padding">
+        <div id="map" class="main" style="height: 100vh"></div>
+
+        <div class="fixed-bottom p-1 text-center" style="background-color: #15B7B9;">
+            {% for items in data %}
+                <span class="badge badge-{{items.tag}}">{{items.name}} : {{items.count}}</span>
+            {% endfor %}
+        </div>
+    </div>
+    <!-- Optional JavaScript -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js"></script>
+    <script>
+      feather.replace()
+    </script>
+    <script type="text/javascript">
+        $(window).on('load',function(){
+            $('#infoModal').modal('show');
+        });
+    </script>
+
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=2762b6da866db6cc165f556670ed4a51&libraries=clusterer"></script>
+    <script>
+        var mapContainer = document.getElementById('map'),
+            mapOption = { 
+                center: new kakao.maps.LatLng(35.350375967591494, 127.86952137759117),
+                minLevel: 12,
+                maxLevel: 13,
+                level: 13
+            };
+        var map = new kakao.maps.Map(mapContainer, mapOption); 
+
+        var clusterer = new kakao.maps.MarkerClusterer({
+            map: map,
+            averageCenter: true, 
+            minLevel: 1
+        });
+    
+        $.getJSON("http://www.withme.xyz:8080/location", function(data) {
+            var markers = $(data.positions).map(function(i, position) {
+                return new kakao.maps.Marker({
+                    position : new kakao.maps.LatLng(position.lat, position.lng)
+                });
+            });
+            clusterer.addMarkers(markers);
+        });  
+    </script>
+
+<script type='text/javascript'>
+    //<![CDATA[
+      // // 사용할 앱의 JavaScript 키를 설정해 주세요.
+      Kakao.init('2762b6da866db6cc165f556670ed4a51');
+      // // 카카오링크 버튼을 생성합니다. 처음 한번만 호출하면 됩니다.
+      function sendLink() {
+        Kakao.Link.sendDefault({
+          objectType: 'feed',
+          content: {
+            title: 'CORO.NA',
+            description: '#코로나19 #현황 #지도 #호서대 #화이팅',
+            imageUrl: 'http://www.withme.xyz/static/img/logo.png',
+            link: {
+              mobileWebUrl: 'http://www.withme.xyz:8080/',
+              webUrl: 'http://www.withme.xyz:8080/'
+            }
+          },
+          social: {
+            likeCount: 0,
+            commentCount: 0,
+            sharedCount: 0
+          },
+          buttons: [
+            {
+              title: '웹으로 보기',
+              link: {
+                mobileWebUrl: 'http://www.withme.xyz:8080/',
+                webUrl: 'http://www.withme.xyz:8080/'
+              }
+            },
+          ]
+        });
+      }
+    //]]>
+  </script>
+
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+  </body>
+</html>
