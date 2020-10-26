@@ -1,7 +1,7 @@
 # withme
 
 <h2 style='color:#3f3f'>메인 페이지</h2>
-<img src="static/img/content1.png" style='width:200px; height:300px'>
+<img src="static/img/content1.png" width="200px" height="300px">
 <p>검색을 동적으로 처리하였으며, 참가 버튼 클릭 시 명 수가 증가하며 참가 취소를 할 수 있다.
 </br>
 또한 각 게시글마다 왼쪽으로 넘기면 댓글을 입력 할 수 있고, 
